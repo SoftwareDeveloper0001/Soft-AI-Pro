@@ -5,7 +5,9 @@ Digunakan oleh Streamlit frontend untuk berkomunikasi dengan backend
 
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit
 import json
+import os
 from typing import Dict, Any, Optional, List
 import logging
 
@@ -17,17 +19,28 @@ logger = logging.getLogger(__name__)
 class APIClient:
     """Client untuk berkomunikasi dengan Flask API"""
     
-    def __init__(self, base_url: str = 'https://cv-sip.my.id'):
+    def __init__(self, base_url: Optional[str] = None):
         """
         Initialize API Client
         
         Args:
-            base_url: Base URL dari Flask API (default: https://cv-sip.my.id)
+            base_url: Base URL backend (default dari API_BASE_URL atau domain production)
         """
-        self.base_url = base_url
+        configured_url = base_url or os.getenv(
+            'API_BASE_URL', 'https://senja-intan-permata.my.id'
+        )
+        self.set_base_url(configured_url)
         self.headers = {
             'Content-Type': 'application/json'
         }
+
+    def set_base_url(self, base_url: str) -> None:
+        """Set backend URL after validating and normalizing it."""
+        normalized_url = base_url.strip().rstrip('/')
+        parsed_url = urlsplit(normalized_url)
+        if parsed_url.scheme not in {'http', 'https'} or not parsed_url.netloc:
+            raise ValueError('API Base URL harus berupa URL http:// atau https:// yang valid.')
+        self.base_url = normalized_url
     
     def _make_request(self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Make HTTP request menggunakan urllib"""
